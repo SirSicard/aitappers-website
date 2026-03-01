@@ -1,61 +1,66 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { LogoAnimated } from "./logo";
+import { useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
+import { ParticleSystem, GridWipeOverlay } from "./particle-system";
 
 const STORAGE_KEY = "aitappers-intro-seen";
 
 export function IntroAnimation({ children }: { children: React.ReactNode }) {
-  const [showIntro, setShowIntro] = useState(false);
+  const [skipIntro, setSkipIntro] = useState(true); // Default true, set false after check
   const [introComplete, setIntroComplete] = useState(true);
+  const [showWipe, setShowWipe] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Respect prefers-reduced-motion
+    setMounted(true);
+
     const prefersReduced = window.matchMedia(
       "(prefers-reduced-motion: reduce)"
     ).matches;
     if (prefersReduced) {
+      setSkipIntro(true);
       setIntroComplete(true);
       return;
     }
 
-    // Only play once per session
     const seen = sessionStorage.getItem(STORAGE_KEY);
     if (seen) {
+      setSkipIntro(true);
       setIntroComplete(true);
       return;
     }
 
-    // Play the intro
-    setShowIntro(true);
+    // Play intro
+    setSkipIntro(false);
     setIntroComplete(false);
     sessionStorage.setItem(STORAGE_KEY, "1");
 
-    // Auto-complete after animation duration
-    const timer = setTimeout(() => {
-      setShowIntro(false);
-    }, 2200);
+    // Trigger grid wipe after scatter(500) + assemble(1000) + hold(500) = 2000ms
+    const wipeTimer = setTimeout(() => {
+      setShowWipe(true);
+    }, 2000);
 
-    return () => clearTimeout(timer);
+    return () => clearTimeout(wipeTimer);
   }, []);
+
+  const handleIntroComplete = useCallback(() => {
+    // Small delay to let wipe tiles finish animating
+    setTimeout(() => {
+      setIntroComplete(true);
+      setShowWipe(false);
+    }, 600);
+  }, []);
+
+  if (!mounted) {
+    // SSR: render children hidden, no canvas
+    return <div className="opacity-0">{children}</div>;
+  }
 
   return (
     <>
-      <AnimatePresence
-        onExitComplete={() => setIntroComplete(true)}
-      >
-        {showIntro && (
-          <motion.div
-            key="intro-splash"
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-background"
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <LogoAnimated size={80} color="hsl(var(--foreground))" />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ParticleSystem skipIntro={skipIntro} onIntroComplete={handleIntroComplete} />
+      <GridWipeOverlay active={showWipe} progress={0} />
 
       {introComplete ? (
         <motion.div
@@ -66,7 +71,7 @@ export function IntroAnimation({ children }: { children: React.ReactNode }) {
           {children}
         </motion.div>
       ) : (
-        <div className="opacity-0">{children}</div>
+        <div className="opacity-0 pointer-events-none">{children}</div>
       )}
     </>
   );

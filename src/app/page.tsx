@@ -1,5 +1,4 @@
 import { Header } from "@/components/header";
-import { HeroGrid } from "@/components/hero-grid";
 import { Hero } from "@/components/sections/hero";
 import { Problem } from "@/components/sections/problem";
 import { HowWeWork } from "@/components/sections/how-we-work";
@@ -13,7 +12,6 @@ import { IntroAnimation } from "@/components/intro-animation";
 export default function Home() {
   return (
     <IntroAnimation>
-      <HeroGrid />
       <Header />
       <main>
         <Hero />

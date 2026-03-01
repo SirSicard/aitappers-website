@@ -29,12 +29,15 @@ export function HeroGrid() {
   const nodesRef = useRef<Node[]>([]);
   const blobsRef = useRef<Blob[]>([]);
   const initializedRef = useRef(false);
+  const scrollRef = useRef(0);
   const shouldReduceMotion = useReducedMotion();
 
   const initNodes = useCallback((w: number, h: number) => {
+    // Create nodes for the full document height
+    const docH = Math.max(h, document.documentElement.scrollHeight);
     const spacing = 50;
     const cols = Math.ceil(w / spacing) + 2;
-    const rows = Math.ceil(h / spacing) + 2;
+    const rows = Math.ceil(docH / spacing) + 2;
     const nodes: Node[] = [];
 
     for (let i = 0; i < cols; i++) {
@@ -56,10 +59,11 @@ export function HeroGrid() {
   }, []);
 
   const initBlobs = useCallback((w: number, h: number) => {
+    const docH = Math.max(h, document.documentElement.scrollHeight);
     blobsRef.current = [
       {
         x: w * 0.3,
-        y: h * 0.4,
+        y: docH * 0.1,
         radius: Math.min(w, h) * 0.25,
         vx: 0.3,
         vy: 0.2,
@@ -67,7 +71,7 @@ export function HeroGrid() {
       },
       {
         x: w * 0.7,
-        y: h * 0.6,
+        y: docH * 0.4,
         radius: Math.min(w, h) * 0.2,
         vx: -0.25,
         vy: 0.15,
@@ -75,7 +79,7 @@ export function HeroGrid() {
       },
       {
         x: w * 0.5,
-        y: h * 0.3,
+        y: docH * 0.7,
         radius: Math.min(w, h) * 0.18,
         vx: 0.15,
         vy: -0.2,
@@ -90,65 +94,67 @@ export function HeroGrid() {
 
       const nodes = nodesRef.current;
       const blobs = blobsRef.current;
+      const scroll = scrollRef.current;
       const mx = mouseRef.current.x;
-      const my = mouseRef.current.y;
+      const my = mouseRef.current.y + scroll; // Mouse in document space
 
-      // --- Layer 1: Gradient blobs ---
-      const blobCanvas = document.createElement("canvas");
-      blobCanvas.width = w;
-      blobCanvas.height = h;
-      const bCtx = blobCanvas.getContext("2d")!;
+      // Visible range (with padding for connections)
+      const viewTop = scroll - 100;
+      const viewBottom = scroll + h + 100;
 
+      // --- Layer 1: Gradient blobs (only visible ones) ---
       for (const blob of blobs) {
-        // Drift blobs
         blob.x += blob.vx;
         blob.y += blob.vy;
 
-        // Bounce off edges with padding
+        const docH = document.documentElement.scrollHeight;
         const pad = blob.radius * 0.5;
         if (blob.x < -pad || blob.x > w + pad) blob.vx *= -1;
-        if (blob.y < -pad || blob.y > h + pad) blob.vy *= -1;
+        if (blob.y < -pad || blob.y > docH + pad) blob.vy *= -1;
 
-        // Slow morphing radius
+        // Skip if not visible
+        if (blob.y + blob.radius < viewTop || blob.y - blob.radius > viewBottom)
+          continue;
+
         const morphRadius =
           blob.radius + Math.sin(time * 0.0008 + blob.hue) * blob.radius * 0.15;
 
-        const gradient = bCtx.createRadialGradient(
-          blob.x,
-          blob.y,
-          0,
-          blob.x,
-          blob.y,
-          morphRadius
+        const drawY = blob.y - scroll;
+
+        const gradient = ctx.createRadialGradient(
+          blob.x, drawY, 0,
+          blob.x, drawY, morphRadius
         );
-        gradient.addColorStop(0, `hsla(${blob.hue}, 70%, 50%, 0.12)`);
-        gradient.addColorStop(0.4, `hsla(${blob.hue}, 60%, 40%, 0.06)`);
+        gradient.addColorStop(0, `hsla(${blob.hue}, 70%, 50%, 0.09)`);
+        gradient.addColorStop(0.4, `hsla(${blob.hue}, 60%, 40%, 0.04)`);
         gradient.addColorStop(1, `hsla(${blob.hue}, 50%, 30%, 0)`);
 
-        bCtx.beginPath();
-        bCtx.arc(blob.x, blob.y, morphRadius, 0, Math.PI * 2);
-        bCtx.fillStyle = gradient;
-        bCtx.fill();
+        ctx.beginPath();
+        ctx.arc(blob.x, drawY, morphRadius, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
       }
 
-      ctx.drawImage(blobCanvas, 0, 0);
-
-      // --- Layer 2: Constellation network ---
+      // --- Layer 2: Constellation network (only visible nodes) ---
       const connectionDist = 90;
       const mouseRadius = 200;
       const mouseGravity = 30;
 
-      // Update node positions
+      // Filter to visible nodes
+      const visibleNodes: Node[] = [];
       for (const node of nodes) {
-        // Ambient drift
+        if (node.y < viewTop - 50 || node.y > viewBottom + 50) continue;
+        visibleNodes.push(node);
+      }
+
+      // Update visible node positions
+      for (const node of visibleNodes) {
         const driftX = Math.sin(time * 0.0004 + node.baseX * 0.01) * 8;
         const driftY = Math.cos(time * 0.0003 + node.baseY * 0.012) * 8;
 
-        // Target position = base + drift
         let targetX = node.baseX + driftX;
         let targetY = node.baseY + driftY;
 
-        // Mouse gravity well
         const dmx = mx - node.x;
         const dmy = my - node.y;
         const mouseDist = Math.sqrt(dmx * dmx + dmy * dmy);
@@ -159,25 +165,23 @@ export function HeroGrid() {
           targetY += (dmy / mouseDist) * force;
         }
 
-        // Smooth interpolation
         node.x += (targetX - node.x) * 0.04;
         node.y += (targetY - node.y) * 0.04;
       }
 
       // Draw connections
       ctx.lineWidth = 0.5;
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          const a = nodes[i];
-          const b = nodes[j];
+      for (let i = 0; i < visibleNodes.length; i++) {
+        for (let j = i + 1; j < visibleNodes.length; j++) {
+          const a = visibleNodes[i];
+          const b = visibleNodes[j];
           const dx = a.x - b.x;
           const dy = a.y - b.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist < connectionDist) {
-            const alpha = (1 - dist / connectionDist) * 0.15;
+            const alpha = (1 - dist / connectionDist) * 0.1;
 
-            // Brighter near mouse
             let mouseBoost = 0;
             const midX = (a.x + b.x) / 2;
             const midY = (a.y + b.y) / 2;
@@ -185,12 +189,12 @@ export function HeroGrid() {
               (midX - mx) ** 2 + (midY - my) ** 2
             );
             if (midMouseDist < mouseRadius) {
-              mouseBoost = (1 - midMouseDist / mouseRadius) * 0.2;
+              mouseBoost = (1 - midMouseDist / mouseRadius) * 0.15;
             }
 
             ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
+            ctx.moveTo(a.x, a.y - scroll);
+            ctx.lineTo(b.x, b.y - scroll);
             ctx.strokeStyle = `hsla(195, 60%, 60%, ${alpha + mouseBoost})`;
             ctx.stroke();
           }
@@ -198,7 +202,7 @@ export function HeroGrid() {
       }
 
       // Draw nodes
-      for (const node of nodes) {
+      for (const node of visibleNodes) {
         const dmx = mx - node.x;
         const dmy = my - node.y;
         const mouseDist = Math.sqrt(dmx * dmx + dmy * dmy);
@@ -206,18 +210,18 @@ export function HeroGrid() {
           mouseDist < mouseRadius ? 1 - mouseDist / mouseRadius : 0;
 
         const size = node.size + mouseInfluence * 1.5;
-        const alpha = 0.12 + mouseInfluence * 0.35;
+        const alpha = 0.08 + mouseInfluence * 0.25;
+        const drawY = node.y - scroll;
 
-        // Glow for nodes near mouse
         if (mouseInfluence > 0.3) {
           ctx.beginPath();
-          ctx.arc(node.x, node.y, size + 3, 0, Math.PI * 2);
-          ctx.fillStyle = `hsla(195, 70%, 55%, ${mouseInfluence * 0.08})`;
+          ctx.arc(node.x, drawY, size + 3, 0, Math.PI * 2);
+          ctx.fillStyle = `hsla(195, 70%, 55%, ${mouseInfluence * 0.06})`;
           ctx.fill();
         }
 
         ctx.beginPath();
-        ctx.arc(node.x, node.y, size, 0, Math.PI * 2);
+        ctx.arc(node.x, drawY, size, 0, Math.PI * 2);
         ctx.fillStyle = `hsla(195, 65%, 65%, ${alpha})`;
         ctx.fill();
       }
@@ -235,68 +239,61 @@ export function HeroGrid() {
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       if (!initializedRef.current) {
-        initNodes(rect.width, rect.height);
-        initBlobs(rect.width, rect.height);
+        initNodes(w, h);
+        initBlobs(w, h);
         initializedRef.current = true;
       }
     };
 
     const onMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      targetRef.current.x = e.clientX - rect.left;
-      targetRef.current.y = e.clientY - rect.top;
+      targetRef.current.x = e.clientX;
+      targetRef.current.y = e.clientY;
     };
 
-    const onLeave = () => {
-      targetRef.current.x = -1000;
-      targetRef.current.y = -1000;
+    const onScroll = () => {
+      scrollRef.current = window.scrollY;
     };
 
     resize();
+    scrollRef.current = window.scrollY;
     window.addEventListener("resize", resize);
-    canvas.addEventListener("mousemove", onMove);
-    canvas.addEventListener("mouseleave", onLeave);
+    document.addEventListener("mousemove", onMove);
+    window.addEventListener("scroll", onScroll, { passive: true });
 
     const loop = (time: number) => {
-      // Smooth mouse tracking
-      mouseRef.current.x +=
-        (targetRef.current.x - mouseRef.current.x) * 0.08;
-      mouseRef.current.y +=
-        (targetRef.current.y - mouseRef.current.y) * 0.08;
+      mouseRef.current.x += (targetRef.current.x - mouseRef.current.x) * 0.08;
+      mouseRef.current.y += (targetRef.current.y - mouseRef.current.y) * 0.08;
 
-      const rect = canvas.getBoundingClientRect();
-      draw(ctx, rect.width, rect.height, time);
+      draw(ctx, window.innerWidth, window.innerHeight, time);
       animId = requestAnimationFrame(loop);
     };
 
     if (!shouldReduceMotion) {
       animId = requestAnimationFrame(loop);
     } else {
-      // Static render
-      initNodes(canvas.getBoundingClientRect().width, canvas.getBoundingClientRect().height);
-      initBlobs(canvas.getBoundingClientRect().width, canvas.getBoundingClientRect().height);
-      const rect = canvas.getBoundingClientRect();
-      draw(ctx, rect.width, rect.height, 0);
+      draw(ctx, window.innerWidth, window.innerHeight, 0);
     }
 
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener("resize", resize);
-      canvas.removeEventListener("mousemove", onMove);
-      canvas.removeEventListener("mouseleave", onLeave);
+      document.removeEventListener("mousemove", onMove);
+      window.removeEventListener("scroll", onScroll);
     };
   }, [draw, initNodes, initBlobs, shouldReduceMotion]);
 
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 w-full h-full"
+      className="fixed inset-0 w-full h-full pointer-events-none"
+      style={{ zIndex: 0 }}
       aria-hidden="true"
     />
   );

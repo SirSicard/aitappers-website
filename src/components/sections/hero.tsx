@@ -1,12 +1,10 @@
 "use client";
 
-import { HeroGrid } from "@/components/hero-grid";
 import { FadeUp } from "@/components/motion";
 
 export function Hero() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      <HeroGrid />
       <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
         <FadeUp>
           <p className="text-sm font-mono text-accent tracking-widest uppercase mb-6">
@@ -45,7 +43,6 @@ export function Hero() {
         </FadeUp>
       </div>
 
-      {/* Gradient fade at bottom */}
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
     </section>
   );

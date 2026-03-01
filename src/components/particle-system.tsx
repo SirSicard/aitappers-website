@@ -2,54 +2,71 @@
 
 import { useEffect, useRef, useCallback } from "react";
 
-// --- Logo shape: diamond + center dot as particle target positions ---
-// Diamond path: M16 2 L30 16 L16 30 L2 16 Z (in 32x32 viewBox)
-// We sample points along the edges + fill the center dot
+// --- Text-based particle targets: render "AI TAPPERS" and sample filled pixels ---
 
-function generateLogoTargets(
-  centerX: number,
-  centerY: number,
-  scale: number
+function generateTextTargets(
+  screenW: number,
+  screenH: number,
 ): { x: number; y: number }[] {
   const points: { x: number; y: number }[] = [];
 
-  // Diamond corners in local space (viewBox 32x32, centered at 16,16)
-  const corners = [
-    { x: 0, y: -14 }, // top
-    { x: 14, y: 0 },  // right
-    { x: 0, y: 14 },  // bottom
-    { x: -14, y: 0 }, // left
-  ];
+  // Create offscreen canvas to render text
+  const offscreen = document.createElement("canvas");
+  // Use a resolution that gives us enough detail
+  const canvasW = Math.min(screenW, 1600);
+  const canvasH = Math.min(screenH, 800);
+  offscreen.width = canvasW;
+  offscreen.height = canvasH;
+  const octx = offscreen.getContext("2d");
+  if (!octx) return points;
 
-  // Sample points along each edge
-  const pointsPerEdge = 18;
-  for (let e = 0; e < 4; e++) {
-    const a = corners[e];
-    const b = corners[(e + 1) % 4];
-    for (let i = 0; i < pointsPerEdge; i++) {
-      const t = i / pointsPerEdge;
-      points.push({
-        x: centerX + (a.x + (b.x - a.x) * t) * scale,
-        y: centerY + (a.y + (b.y - a.y) * t) * scale,
-      });
-    }
-  }
+  // Size text to fill ~85% of width on desktop, proportional on mobile
+  const targetWidth = canvasW * 0.85;
+  // Start with a large font size and measure, then scale down
+  let fontSize = canvasW * 0.18;
+  octx.font = `600 ${fontSize}px "Geist Sans", "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif`;
+  let measured = octx.measureText("AI TAPPERS");
+  // Scale font to fit target width
+  fontSize = fontSize * (targetWidth / measured.width);
+  // Clamp minimum for very small screens
+  fontSize = Math.max(fontSize, 24);
 
-  // Center dot — filled circle of particles (r=2.5 in viewBox)
-  const dotRadius = 2.5 * scale;
-  const dotParticles = 12;
-  // Center point
-  points.push({ x: centerX, y: centerY });
-  // Rings
-  for (let ring = 1; ring <= 2; ring++) {
-    const r = (dotRadius * ring) / 2;
-    const count = ring === 1 ? 4 : dotParticles - 4;
-    for (let i = 0; i < count; i++) {
-      const angle = (Math.PI * 2 * i) / count + ring * 0.3;
-      points.push({
-        x: centerX + Math.cos(angle) * r,
-        y: centerY + Math.sin(angle) * r,
-      });
+  octx.font = `600 ${fontSize}px "Geist Sans", "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif`;
+  measured = octx.measureText("AI TAPPERS");
+
+  const textWidth = measured.width;
+  const textHeight = fontSize; // approximate
+  const textX = (canvasW - textWidth) / 2;
+  // Vertically center using font metrics
+  const ascent = measured.actualBoundingBoxAscent || fontSize * 0.75;
+  const descent = measured.actualBoundingBoxDescent || fontSize * 0.25;
+  const totalH = ascent + descent;
+  const textY = (canvasH + totalH) / 2 - descent;
+
+  // Render text
+  octx.fillStyle = "#fff";
+  octx.fillText("AI TAPPERS", textX, textY);
+
+  // Sample pixels — adaptive spacing based on screen size
+  // More particles on larger screens for density, fewer on mobile
+  const step = screenW > 768 ? 4 : 6;
+  const imageData = octx.getImageData(0, 0, canvasW, canvasH);
+  const data = imageData.data;
+
+  // Scale factor from offscreen canvas to actual screen coordinates
+  const scaleX = screenW / canvasW;
+  const scaleY = screenH / canvasH;
+
+  for (let y = 0; y < canvasH; y += step) {
+    for (let x = 0; x < canvasW; x += step) {
+      const idx = (y * canvasW + x) * 4;
+      // Check alpha channel — any filled pixel
+      if (data[idx + 3] > 128) {
+        points.push({
+          x: x * scaleX,
+          y: y * scaleY,
+        });
+      }
     }
   }
 
@@ -132,9 +149,8 @@ export function ParticleSystem({ onIntroComplete, skipIntro }: ParticleSystemPro
     const particles: Particle[] = [];
     const docH = Math.max(h, document.documentElement.scrollHeight || h * 3);
 
-    // Logo targets
-    const logoScale = Math.min(w, h) * 0.035;
-    const logoTargets = generateLogoTargets(w / 2, h / 2, logoScale);
+    // Text targets — "AI TAPPERS" rendered via offscreen canvas
+    const logoTargets = generateTextTargets(w, h);
 
     // Grid spacing for constellation
     const spacing = 50;

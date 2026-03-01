@@ -8,10 +8,11 @@ import { Trust } from "@/components/sections/trust";
 import { Team } from "@/components/sections/team";
 import { Contact } from "@/components/sections/contact";
 import { Footer } from "@/components/footer";
+import { IntroAnimation } from "@/components/intro-animation";
 
 export default function Home() {
   return (
-    <>
+    <IntroAnimation>
       <HeroGrid />
       <Header />
       <main>
@@ -24,6 +25,6 @@ export default function Home() {
         <Contact />
       </main>
       <Footer />
-    </>
+    </IntroAnimation>
   );
 }

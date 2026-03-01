@@ -50,6 +50,7 @@ export default function RootLayout({
       className={`${inter.variable} ${GeistSans.variable} ${GeistMono.variable} dark`}
     >
       <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

@@ -1,11 +1,11 @@
+import { Logo } from "./logo";
+
 export function Footer() {
   return (
     <footer className="border-t border-border py-10">
       <div className="mx-auto max-w-6xl px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-6">
-          <span className="font-display text-sm font-semibold text-foreground">
-            AI Tappers
-          </span>
+          <Logo size="sm" />
           <a
             href="https://www.linkedin.com/company/ai-tappers/"
             target="_blank"

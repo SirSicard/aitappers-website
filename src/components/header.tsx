@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Logo } from "./logo";
 
 const navLinks = [
   { href: "#problem", label: "The Problem" },
@@ -30,11 +31,8 @@ export function Header() {
       }`}
     >
       <nav className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-        <a
-          href="#"
-          className="font-display text-lg font-semibold tracking-tight text-foreground"
-        >
-          AI Tappers
+        <a href="#" className="text-foreground">
+          <Logo size="sm" />
         </a>
 
         {/* Desktop nav */}

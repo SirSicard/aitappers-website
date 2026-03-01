@@ -15,11 +15,17 @@ export function Contact() {
     const data = new FormData(form);
 
     try {
-      await fetch("https://formspree.io/f/xpwzgkla", {
+      const res = await fetch("/api/contact", {
         method: "POST",
-        body: data,
-        headers: { Accept: "application/json" },
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.get("name"),
+          email: data.get("email"),
+          company: data.get("company"),
+          message: data.get("message"),
+        }),
       });
+      if (!res.ok) throw new Error("Failed");
       setSubmitted(true);
     } catch {
       // Fallback: open mailto

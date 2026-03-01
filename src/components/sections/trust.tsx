@@ -49,7 +49,7 @@ export function Trust() {
         <Stagger className="flex flex-wrap gap-3 mb-16" stagger={0.05}>
           {sectors.map((sector) => (
             <StaggerChild key={sector}>
-              <span className="px-4 py-2 rounded-full border border-border text-sm text-muted-foreground font-mono">
+              <span className="px-4 py-2 rounded-full border border-accent/40 text-sm text-accent font-mono">
                 {sector}
               </span>
             </StaggerChild>

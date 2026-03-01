@@ -92,7 +92,7 @@ export function HowWeWork() {
                       {step.deliverables.map((d, i) => (
                         <li
                           key={i}
-                          className="text-xs font-mono px-3 py-1.5 rounded-full border border-border text-muted-foreground"
+                          className="text-xs font-mono px-3 py-1.5 rounded-full border border-accent/40 text-accent"
                         >
                           {d}
                         </li>

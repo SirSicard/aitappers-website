@@ -160,9 +160,10 @@ export function ParticleSystem({ onIntroComplete, skipIntro }: ParticleSystemPro
     // Create logo particles
     for (let i = 0; i < logoTargets.length; i++) {
       const t = logoTargets[i];
-      // Find nearest grid position for this logo particle's constellation destination
-      const gridX = Math.round(t.x / spacing) * spacing;
-      const gridY = Math.round(t.y / spacing) * spacing;
+      // Scatter to random positions across the full document after intro
+      // NOT nearest grid point — that would retain the text shape
+      const gridX = Math.random() * w;
+      const gridY = Math.random() * docH;
 
       particles.push({
         x: skipIntro ? gridX : Math.random() * w,

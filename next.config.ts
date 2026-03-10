@@ -15,6 +15,9 @@ const cspDirectives = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: ".",
+  },
   async headers() {
     return [
       {

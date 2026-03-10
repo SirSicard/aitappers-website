@@ -489,7 +489,7 @@ function InvestmentSection() {
                 Fixed fee. Typically 4 weeks.
               </p>
             </div>
-            <ul className="text-sm text-muted-foreground space-y-2 text-left max-w-md mx-auto">
+            <ul className="text-sm text-muted-foreground space-y-2 text-left inline-block">
               <li className="flex items-start gap-2">
                 <span className="text-accent mt-0.5">&#10003;</span>
                 Organisational workflow analysis

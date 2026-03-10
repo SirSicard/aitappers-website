@@ -529,6 +529,8 @@ function CTASection() {
           </h2>
           <a
             href="/#contact"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center justify-center px-8 py-4 rounded-lg bg-accent text-background font-medium text-sm hover:bg-accent/90 transition-all duration-200 hover:shadow-[0_0_20px_hsla(36,87%,56%,0.3)]"
           >
             Start a Conversation

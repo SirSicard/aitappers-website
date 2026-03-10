@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Footer } from "@/components/footer";
-import { LogoMark } from "@/components/logo";
+import { Logo } from "@/components/logo";
 import { FadeUp, Stagger, StaggerChild, ScaleIn } from "@/components/motion";
 import { ArchitectureDiagram } from "./diagram";
 
@@ -154,7 +154,7 @@ export function DiscoveryContent() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="flex justify-center py-4">
           <a href="/" target="_blank" rel="noopener noreferrer">
-            <LogoMark size={24} color="hsl(36 87% 56%)" />
+            <Logo size="sm" />
           </a>
         </div>
       </header>
